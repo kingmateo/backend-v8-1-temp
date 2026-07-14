@@ -70,6 +70,16 @@ LTXVideoGenFps = Literal[15, 24, 25, 30, 50, 60, 120, 240]
 LTXVideoGenPipeline = Literal["fast", "fast_hq", "pro"]
 
 
+# ============================================================
+# ✅ کلاس گم‌شده را اینجا اضافه می‌کنیم
+# ============================================================
+class ImageConditioningInput(BaseModel):
+    """ورودی شرطی تصویر برای تولید ویدئو"""
+    image_path: str = Field(..., description="مسیر فایل تصویر")
+    strength: float = Field(default=0.8, ge=0.0, le=1.0, description="نیروی تأثیر تصویر")
+    scale: float = Field(default=1.0, ge=0.0, le=2.0, description="مقیاس تصویر")
+
+
 class LTXVideoGenerationResolutionSpec(BaseModel):
     fps_to_durations: dict[LTXVideoGenFps, list[LTXVideoGenDuration]]
 
@@ -88,7 +98,6 @@ class LTXVideoGenerationModelSpecItem(BaseModel):
 class GenerateVideoModelsSpecsResponse(BaseModel):
     local_models: list[LTXVideoGenerationModelSpecItem]
     api_models: list[LTXVideoGenerationModelSpecItem]
-    # ✅ لیست آپ‌اسکیل‌های قابل انتخاب
     upscalers: list[ModelCheckpointID] = [
         "ltx-2.3-spatial-upscaler-x1.5-1.0",
         "ltx-2.3-spatial-upscaler-x2-1.1",
