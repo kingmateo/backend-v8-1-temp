@@ -1,5 +1,4 @@
 # runtime_config/runtime_config.py
-
 from __future__ import annotations
 
 import logging
@@ -26,7 +25,10 @@ class RuntimeConfig:
 
     # Model config
     models_dir: Path = field(init=False)
-    pipeline_checkpoint_path: str = ""
+
+    # ✅ مسیرهای جداگانه برای مدل‌های مختلف
+    pipeline_checkpoint_path_fast: str = ""   # مسیر مدل distilled (برای Fast و Fast HQ)
+    pipeline_checkpoint_path_pro: str = ""    # مسیر مدل dev (برای PRO)
     pipeline_upsampler_path: str = ""
     gemma_root: str | None = None
 
@@ -84,7 +86,9 @@ def load_runtime_config(app_dir: Path, lock: RLock) -> RuntimeConfig:
 
         with lock:
             config = RuntimeConfig(app_dir=app_dir, **config_dict)  # type: ignore[arg-type]
-            logger.info("Loaded runtime config from %s", config_path)
+
+        logger.info("Loaded runtime config from %s", config_path)
+
     except Exception as e:
         logger.exception("Failed to load runtime config: %s", e)
         config = base_config
