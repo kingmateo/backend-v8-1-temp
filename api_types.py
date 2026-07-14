@@ -1,7 +1,7 @@
 # api_types.py
 from __future__ import annotations
 
-from typing import Annotated, Literal, TypeAlias
+from typing import Annotated, Literal, TypeAlias, Union
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -34,6 +34,18 @@ VideoCameraMotion = Literal[
     "static",
 ]
 
+# ============================================================
+# ✅ نوع‌های مشترک برای جلوگیری از واردات دوری
+# ============================================================
+AudioOrNone = Union[bytes, None]  # نوع داده صوتی (اختیاری)
+
+class ImageConditioningInput(BaseModel):
+    """ورودی شرطی تصویر برای تولید ویدئو"""
+    image_path: str = Field(..., description="مسیر فایل تصویر")
+    strength: float = Field(default=0.8, ge=0.0, le=1.0, description="نیروی تأثیر تصویر")
+    scale: float = Field(default=1.0, ge=0.0, le=2.0, description="مقیاس تصویر")
+
+# ============================================================
 
 class HTTPErrorResponse(BaseModel):
     status_code: int = Field(..., description="HTTP status code")
@@ -68,16 +80,6 @@ LTXVideoGenDuration = Literal[
 ]
 LTXVideoGenFps = Literal[15, 24, 25, 30, 50, 60, 120, 240]
 LTXVideoGenPipeline = Literal["fast", "fast_hq", "pro"]
-
-
-# ============================================================
-# ✅ کلاس گم‌شده را اینجا اضافه می‌کنیم
-# ============================================================
-class ImageConditioningInput(BaseModel):
-    """ورودی شرطی تصویر برای تولید ویدئو"""
-    image_path: str = Field(..., description="مسیر فایل تصویر")
-    strength: float = Field(default=0.8, ge=0.0, le=1.0, description="نیروی تأثیر تصویر")
-    scale: float = Field(default=1.0, ge=0.0, le=2.0, description="مقیاس تصویر")
 
 
 class LTXVideoGenerationResolutionSpec(BaseModel):
