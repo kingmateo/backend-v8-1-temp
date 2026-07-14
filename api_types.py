@@ -1,85 +1,109 @@
 # api_types.py
-
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal, TypeAlias
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
-from pydantic import BaseModel, Field
+NonEmptyPrompt = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
+ModelCheckpointID = Literal[
+    "ltx-2.3-22b-dev",
+    "ltx-2.3-22b-distilled",
+    "ltx-2.3-spatial-upscaler-x2-1.0",
+    "ltx-2.3-spatial-upscaler-x1.5-1.0",
+    "ltx-2.3-spatial-upscaler-x2-1.1",
+    "ltx-2.3-22b-ic-lora-union-control-ref0.5",
+    "dpt-hybrid-midas",
+    "yolox-l-torchscript",
+    "dw-ll-ucoco-384-bs5",
+    "gemma-3-12b-it-qat-q4_0-unquantized",
+    "z-image-turbo"
+]
+
+VideoCameraMotion = Literal[
+    "none", "pan_left", "pan_right", "tilt_up", "tilt_down",
+    "zoom_in", "zoom_out", "roll_clockwise", "roll_counter_clockwise", "static"
+]
 
 class HTTPErrorResponse(BaseModel):
     status_code: int = Field(..., description="HTTP status code")
     message: str = Field(..., description="Error message")
 
+class GenerateTextRequest(BaseModel):
+    model_config = ConfigDict(strict=True)
+    prompt: NonEmptyPrompt
 
-class ImageConditioningInput(BaseModel):
-    path: str = Field(..., description="Path to the conditioning image")
-    frame_idx: int = Field(..., description="Frame index to apply conditioning")
-    strength: float = Field(..., description="Conditioning strength")
+class GenerateTextResponse(BaseModel):
+    text: str
 
+class GenerateImageRequest(BaseModel):
+    model_config = ConfigDict(strict=True)
+    prompt: NonEmptyPrompt
+    negativePrompt: str = ""
+    imagePath: str | None = None
+    aspectRatio: Literal["1:1", "16:9", "9:16", "4:3", "3:4"] = "1:1"
+
+class GenerateImageResponse(BaseModel):
+    imagePath: str
+
+LTXVideoGenResolution = Literal["480p", "720p", "1080p", "1440p", "2160p", "2k", "4k"]
+LTXVideoGenDuration = Literal[
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+    11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    21, 22, 23, 24, 25, 26, 27, 28, 29, 30
+]
+LTXVideoGenFps = Literal[15, 24, 25, 30, 50, 60, 120, 240]
+LTXVideoGenPipeline = Literal["fast", "fast_hq", "pro"]
+
+class LTXVideoGenerationResolutionSpec(BaseModel):
+    fps_to_durations: dict[LTXVideoGenFps, list[LTXVideoGenDuration]]
+
+class LTXVideoGenerationSpec(BaseModel):
+    display_name: str
+    supported_resolutions_durations: dict[LTXVideoGenResolution, LTXVideoGenerationResolutionSpec]
+    a2v_supported_resolutions_durations: dict[LTXVideoGenResolution, LTXVideoGenerationResolutionSpec] | None = None
+
+class LTXVideoGenerationModelSpecItem(BaseModel):
+    pipeline: LTXVideoGenPipeline
+    spec: LTXVideoGenerationSpec
+
+class GenerateVideoModelsSpecsResponse(BaseModel):
+    local_models: list[LTXVideoGenerationModelSpecItem]
+    api_models: list[LTXVideoGenerationModelSpecItem]
 
 class GenerateVideoRequest(BaseModel):
-    prompt: str = Field(..., description="Text prompt to generate video from")
-    negative_prompt: str = Field("", description="Text prompt to negatively influence generation")
-    width: int = Field(512, description="Width of the generated video")
-    height: int = Field(512, description="Height of the generated video")
-    num_frames: int = Field(24, description="Number of frames in the generated video")
-    frame_rate: float = Field(8.0, description="Frame rate of the generated video")
-    camera_motion: str = Field("static", description="Camera motion type")
-    seed: int | None = Field(None, description="Seed for reproducibility")
-    model: Literal["fast", "fast_hq", "pro"] = Field(
-        "fast", description="Type of video generation model to use"
-    )
-    ref_image: str | None = Field(None, description="Path to reference image for image-to-video")
-    image_conditioning: list[ImageConditioningInput] | None = Field(
-        None, description="List of conditioning images"
-    )
-
+    model_config = ConfigDict(strict=True)
+    prompt: NonEmptyPrompt
+    resolution: LTXVideoGenResolution = "1080p"
+    model: LTXVideoGenPipeline = "fast"
+    upscaler: ModelCheckpointID = "ltx-2.3-spatial-upscaler-x2-1.1"
+    cameraMotion: VideoCameraMotion = "none"
+    negativePrompt: str = ""
+    duration: LTXVideoGenDuration = 5
+    fps: LTXVideoGenFps = 24
+    audio: bool = False
+    imagePath: str | None = None
+    audioPath: str | None = None
+    aspectRatio: Literal["16:9", "9:16"] = "16:9"
+    seed: int | None = None
 
 class GenerateVideoResponse(BaseModel):
-    video_path: str | None = Field(None, description="Path to the generated video file")
-    audio_path: str | None = Field(None, description="Path to the generated audio file")
-
-
-class UpscaleVideoRequest(BaseModel):
-    video_path: str = Field(..., description="Path to the video to upscale")
-    upscaler_model: str = Field(..., description="Name of the upscaler model to use")
-
-
-class UpscaleVideoResponse(BaseModel):
-    video_path: str | None = Field(None, description="Path to the upscaled video file")
-
+    videoPath: str | None = None
+    audioPath: str | None = None
+    message: str | None = None
 
 class CancelCancellingResponse(BaseModel):
-    status: Literal["cancelling"] = Field("cancelling")
+    status: Literal["cancelling"] = "cancelling"
     id: str
 
-
 class CancelNoActiveGenerationResponse(BaseModel):
-    status: Literal["no_active_generation"] = Field("no_active_generation")
-
+    status: Literal["no_active_generation"] = "no_active_generation"
 
 CancelResponse = CancelCancellingResponse | CancelNoActiveGenerationResponse
-
 
 class GenerationProgressResponse(BaseModel):
     status: Literal["idle", "running", "complete", "cancelled", "error"]
     phase: str
     progress: int
-    currentStep: int | None
-    totalSteps: int | None
-
-
-VideoModelType = Literal["fast", "fast_hq", "pro"]
-LTXVideoGenResolution = Literal["480p", "720p", "1080p", "1440p", "2160p", "2k", "4k"]
-
-
-class LTXVideoGenerationModelSpecItem(BaseModel):
-    model_type: VideoModelType
-    resolution: LTXVideoGenResolution
-    cp_id: str
-    upscale_cp_id: str
-
-
-class LTXVideoGenerationModelSpec(BaseModel):
-    models: list[LTXVideoGenerationModelSpecItem]
+    currentStep: int | None = None
+    totalSteps: int | None = None
