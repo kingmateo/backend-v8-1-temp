@@ -1,15 +1,15 @@
 # services/interfaces.py
-
 from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Iterator
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-import torch
-from PIL import Image
-
-from api_types import GenerateVideoResponse, ImageConditioningInput, LTXVideoGenResolution
+from api_types import (
+    GenerateVideoResponse,
+    ImageConditioningInput,
+    LTXVideoGenResolution,
+)
 from services.services_utils import AudioOrNone, TilingConfigType
 
 
@@ -32,28 +32,26 @@ class VideoPipeline(Protocol):
         resolution: LTXVideoGenResolution | None,
         upscaler: str | None,
     ) -> Iterator[torch.Tensor] | GenerateVideoResponse:
+        """تولید ویدئو"""
         ...
 
     @abstractmethod
     def warmup(self, output_path: str) -> None:
+        """گرم کردن pipeline"""
         ...
 
     @abstractmethod
     def compile_transformer(self) -> None:
+        """کامپایل Transformer"""
         ...
 
 
 __all__ = [
-    "Any",
     "AudioOrNone",
-    "Image",
     "ImageConditioningInput",
     "Iterator",
     "LTXVideoGenResolution",
-    "Protocol",
     "GenerateVideoResponse",
     "TilingConfigType",
     "VideoPipeline",
-    "abstractmethod",
-    "runtime_checkable",
 ]
