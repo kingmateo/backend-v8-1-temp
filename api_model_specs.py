@@ -1,125 +1,182 @@
 # api_model_specs.py
-from __future__ import annotations
+from typing import Final
 
 from api_types import (
     GenerateVideoModelsSpecsResponse,
-    GenerateVideoRequest,
-    LTXVideoGenerationModelSpecItem,
-    LTXVideoGenerationResolutionSpec,
-    LTXVideoGenerationSpec,
     LTXVideoGenDuration,
     LTXVideoGenFps,
     LTXVideoGenPipeline,
     LTXVideoGenResolution,
+    LTXVideoGenerationModelSpecItem,
+    LTXVideoGenerationResolutionSpec,
+    LTXVideoGenerationSpec,
 )
 from runtime_config.model_download_specs import (
     ALL_LTX_LOCAL_MODEL_IDS,
-    LTXLocalModelRelevant,
     get_ltx_model_spec,
 )
 
-def _resolution_spec(
-    *,
-    fps_to_durations: dict[LTXVideoGenFps, tuple[LTXVideoGenDuration, ...]],
-) -> LTXVideoGenerationResolutionSpec:
+ALL_DURATIONS_1_TO_30: Final = tuple(range(1, 31))
+
+
+def _resolution_spec(*, durations_by_fps: dict[int, list[int]]) -> LTXVideoGenerationResolutionSpec:
     return LTXVideoGenerationResolutionSpec(
         fps_to_durations={
-            fps: list(durations)
-            for fps, durations in fps_to_durations.items()
+            int(fps): [int(duration) for duration in durations]
+            for fps, durations in durations_by_fps.items()
         }
     )
 
-ltx_api_model_specs: tuple[tuple[LTXVideoGenPipeline, LTXVideoGenerationSpec], ...] = (
+
+# ============================================================
+#  مشخصات مدل‌های API (Fast, Fast HQ, PRO)
+# ============================================================
+
+ltx_api_model_specs: Final[tuple[tuple[LTXVideoGenPipeline, LTXVideoGenerationSpec], ...]] = (
+
+    # ---------- حالت Fast ----------
     (
         "fast",
         LTXVideoGenerationSpec(
-            display_name="LTX-2.3 Fast (API)",
+            display_name="LTX 2.3 (Fast)",
             supported_resolutions_durations={
-                "1080p": _resolution_spec(
-                    fps_to_durations={
-                        24: (6, 8, 10, 12, 14, 16, 18, 20),
-                        25: (6, 8, 10, 12, 14, 16, 18, 20),
-                        48: (6, 8, 10),
-                        50: (6, 8, 10),
-                    }
-                ),
-                "1440p": _resolution_spec(
-                    fps_to_durations={
-                        24: (6, 8, 10),
-                        25: (6, 8, 10),
-                        48: (6, 8, 10),
-                        50: (6, 8, 10),
-                    }
-                ),
-                "2160p": _resolution_spec(
-                    fps_to_durations={
-                        24: (6, 8, 10),
-                        25: (6, 8, 10),
-                    }
-                ),
+                "4k": _resolution_spec(durations_by_fps={
+                    15: ALL_DURATIONS_1_TO_30,
+                    24: ALL_DURATIONS_1_TO_30,
+                    25: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                }),
+                "2k": _resolution_spec(durations_by_fps={
+                    15: ALL_DURATIONS_1_TO_30,
+                    24: ALL_DURATIONS_1_TO_30,
+                    25: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                }),
+                "1080p": _resolution_spec(durations_by_fps={
+                    15: ALL_DURATIONS_1_TO_30,
+                    24: ALL_DURATIONS_1_TO_30,
+                    25: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                    50: ALL_DURATIONS_1_TO_30,
+                    60: ALL_DURATIONS_1_TO_30,
+                }),
+                "720p": _resolution_spec(durations_by_fps={
+                    15: ALL_DURATIONS_1_TO_30,
+                    24: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                    50: ALL_DURATIONS_1_TO_30,
+                    60: ALL_DURATIONS_1_TO_30,
+                    120: ALL_DURATIONS_1_TO_30,
+                }),
+                "480p": _resolution_spec(durations_by_fps={
+                    15: ALL_DURATIONS_1_TO_30,
+                    24: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                    50: ALL_DURATIONS_1_TO_30,
+                    60: ALL_DURATIONS_1_TO_30,
+                    120: ALL_DURATIONS_1_TO_30,
+                    240: ALL_DURATIONS_1_TO_30,
+                }),
             },
             a2v_supported_resolutions_durations={
-                "1080p": _resolution_spec(
-                    fps_to_durations={
-                        24: (6, 8, 10, 12, 14, 16, 18, 20),
-                        25: (6, 8, 10, 12, 14, 16, 18, 20),
-                    }
-                )
+                "480p": _resolution_spec(durations_by_fps={24: ALL_DURATIONS_1_TO_30}),
+                "720p": _resolution_spec(durations_by_fps={24: ALL_DURATIONS_1_TO_30}),
+                "1080p": _resolution_spec(durations_by_fps={24: ALL_DURATIONS_1_TO_30}),
             },
         ),
     ),
+
+    # ---------- حالت Fast HQ ----------
     (
         "fast_hq",
         LTXVideoGenerationSpec(
-            display_name="LTX-2.3 Fast HQ (API)",
+            display_name="LTX 2.3 (Fast HQ)",
             supported_resolutions_durations={
-                "1080p": _resolution_spec(
-                    fps_to_durations={
-                        24: (6, 8, 10, 12),
-                        30: (6, 8, 10),
-                    }
-                ),
-                "1440p": _resolution_spec(
-                    fps_to_durations={
-                        30: (6, 8, 10),
-                    }
-                ),
-                "2160p": _resolution_spec(
-                    fps_to_durations={
-                        24: (6, 8, 10),
-                    }
-                ),
+                "4k": _resolution_spec(durations_by_fps={
+                    15: ALL_DURATIONS_1_TO_30,
+                    24: ALL_DURATIONS_1_TO_30,
+                    25: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                }),
+                "2k": _resolution_spec(durations_by_fps={
+                    15: ALL_DURATIONS_1_TO_30,
+                    24: ALL_DURATIONS_1_TO_30,
+                    25: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                }),
+                "1080p": _resolution_spec(durations_by_fps={
+                    15: ALL_DURATIONS_1_TO_30,
+                    24: ALL_DURATIONS_1_TO_30,
+                    25: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                    50: ALL_DURATIONS_1_TO_30,
+                    60: ALL_DURATIONS_1_TO_30,
+                }),
+                "720p": _resolution_spec(durations_by_fps={
+                    15: ALL_DURATIONS_1_TO_30,
+                    24: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                    50: ALL_DURATIONS_1_TO_30,
+                    60: ALL_DURATIONS_1_TO_30,
+                    120: ALL_DURATIONS_1_TO_30,
+                }),
+                "480p": _resolution_spec(durations_by_fps={
+                    15: ALL_DURATIONS_1_TO_30,
+                    24: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                    50: ALL_DURATIONS_1_TO_30,
+                    60: ALL_DURATIONS_1_TO_30,
+                    120: ALL_DURATIONS_1_TO_30,
+                    240: ALL_DURATIONS_1_TO_30,
+                }),
             },
             a2v_supported_resolutions_durations={
-                "1080p": _resolution_spec(
-                    fps_to_durations={
-                        24: (6, 8, 10, 12),
-                    }
-                )
+                "480p": _resolution_spec(durations_by_fps={24: ALL_DURATIONS_1_TO_30}),
+                "720p": _resolution_spec(durations_by_fps={24: ALL_DURATIONS_1_TO_30}),
+                "1080p": _resolution_spec(durations_by_fps={24: ALL_DURATIONS_1_TO_30}),
             },
         ),
     ),
+
+    # ---------- حالت PRO ----------
     (
         "pro",
         LTXVideoGenerationSpec(
-            display_name="LTX-2.3 Pro (API)",
+            display_name="LTX 2.3 (PRO)",
             supported_resolutions_durations={
-                "1080p": _resolution_spec(
-                    fps_to_durations={
-                        24: (6, 8, 10, 12, 14, 16, 18, 20),
-                    }
-                )
+                "2k": _resolution_spec(durations_by_fps={
+                    24: ALL_DURATIONS_1_TO_30,
+                    25: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                }),
+                "1080p": _resolution_spec(durations_by_fps={
+                    24: ALL_DURATIONS_1_TO_30,
+                    25: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                }),
+                "720p": _resolution_spec(durations_by_fps={
+                    24: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                    50: ALL_DURATIONS_1_TO_30,
+                    60: ALL_DURATIONS_1_TO_30,
+                }),
+                "480p": _resolution_spec(durations_by_fps={
+                    24: ALL_DURATIONS_1_TO_30,
+                    30: ALL_DURATIONS_1_TO_30,
+                    50: ALL_DURATIONS_1_TO_30,
+                    60: ALL_DURATIONS_1_TO_30,
+                    120: ALL_DURATIONS_1_TO_30,
+                }),
             },
             a2v_supported_resolutions_durations={
-                "1080p": _resolution_spec(
-                    fps_to_durations={
-                        24: (6, 8, 10, 12, 14, 16, 18, 20),
-                    }
-                )
+                "480p": _resolution_spec(durations_by_fps={24: ALL_DURATIONS_1_TO_30}),
+                "720p": _resolution_spec(durations_by_fps={24: ALL_DURATIONS_1_TO_30}),
+                "1080p": _resolution_spec(durations_by_fps={24: ALL_DURATIONS_1_TO_30}),
             },
         ),
     ),
 )
+
 
 def _pairs_to_items(
     pairs: tuple[tuple[LTXVideoGenPipeline, LTXVideoGenerationSpec], ...],
@@ -129,85 +186,47 @@ def _pairs_to_items(
         for pipeline, spec in pairs
     ]
 
+
 def get_local_video_generation_model_specs() -> list[LTXVideoGenerationModelSpecItem]:
-    items: list[LTXVideoGenerationModelSpecItem] = []
-    for model_id in ALL_LTX_LOCAL_MODEL_IDS:
-        spec = get_ltx_model_spec(model_id)
-        if isinstance(spec.relevance, LTXLocalModelRelevant):
-            items.extend(_pairs_to_items(spec.supported_pipelines))
-    return items
+    return [
+        LTXVideoGenerationModelSpecItem(
+            pipeline=model_id,  # type: ignore[arg-type]
+            spec=get_ltx_model_spec(model_id),
+        )
+        for model_id in ALL_LTX_LOCAL_MODEL_IDS
+    ]
+
 
 def get_api_video_generation_model_specs() -> list[LTXVideoGenerationModelSpecItem]:
     return _pairs_to_items(ltx_api_model_specs)
+
 
 def build_generate_video_model_specs_response() -> GenerateVideoModelsSpecsResponse:
     return GenerateVideoModelsSpecsResponse(
         local_models=get_local_video_generation_model_specs(),
         api_models=get_api_video_generation_model_specs(),
+        upscalers=[
+            "ltx-2.3-spatial-upscaler-x1.5-1.0",
+            "ltx-2.3-spatial-upscaler-x2-1.1",
+        ],
     )
+
 
 def _get_resolution_spec(
-    item: LTXVideoGenerationModelSpecItem,
-    *,
+    spec: LTXVideoGenerationSpec,
     resolution: LTXVideoGenResolution,
-    is_a2v: bool,
+    *,
+    is_a2v: bool = False,
 ) -> LTXVideoGenerationResolutionSpec | None:
-    if is_a2v and item.spec.a2v_supported_resolutions_durations is not None:
-        resolution_map = item.spec.a2v_supported_resolutions_durations
-    else:
-        resolution_map = item.spec.supported_resolutions_durations
-    return resolution_map.get(resolution)
+    if is_a2v and spec.a2v_supported_resolutions_durations is not None:
+        return spec.a2v_supported_resolutions_durations.get(resolution)
+    return spec.supported_resolutions_durations.get(resolution)
+
 
 def get_supported_durations(
-    resolution_spec: LTXVideoGenerationResolutionSpec,
+    resolution_spec: LTXVideoGenerationResolutionSpec | None,
     fps: LTXVideoGenFps,
 ) -> list[LTXVideoGenDuration]:
-    return resolution_spec.fps_to_durations.get(fps, [])
-
-def validate_generate_video_request(
-    req: GenerateVideoRequest,
-    use_api_specs: bool,
-) -> str | None:
-    items = get_api_video_generation_model_specs() if use_api_specs else get_local_video_generation_model_specs()
-    item = next((candidate for candidate in items if candidate.pipeline == req.model), None)
-    
-    generation_backend = "api" if use_api_specs else "local"
-    generation_mode = (
-        "audio-to-video"
-        if req.audioPath is not None
-        else "image-to-video"
-        if req.imagePath is not None
-        else "text-to-video"
-    )
-
-    if item is None:
-        return (
-            f"Unsupported {generation_backend} video generation pipeline: {req.model}. "
-            f"Supported pipelines: {', '.join(candidate.pipeline for candidate in items)}"
-        )
-
-    resolution_spec = _get_resolution_spec(
-        item,
-        resolution=req.resolution,
-        is_a2v=req.audioPath is not None,
-    )
     if resolution_spec is None:
-        return (
-            f"Unsupported {generation_backend} {generation_mode} resolution "
-            f"'{req.resolution}' for pipeline '{req.model}'"
-        )
-
-    if req.fps not in resolution_spec.fps_to_durations:
-        return (
-            f"Unsupported {generation_backend} {generation_mode} fps '{req.fps}' "
-            f"for pipeline '{req.model}' at resolution '{req.resolution}'"
-        )
-
-    supported_durations = get_supported_durations(resolution_spec, fps=req.fps)
-    if req.duration not in supported_durations:
-        return (
-            f"Unsupported {generation_backend} {generation_mode} duration "
-            f"'{req.duration}' for pipeline '{req.model}' at resolution "
-            f"'{req.resolution}' and fps '{req.fps}'"
-        )
-    return None
+        return []
+    return resolution_spec.fps_to_durations.get(fps, [])
