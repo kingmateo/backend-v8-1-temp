@@ -1,9 +1,7 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import assert_never
-
 from api_types import (
     LTXLocalModelId,
     LTXVideoGenPipeline,
@@ -11,7 +9,6 @@ from api_types import (
     LTXVideoGenerationSpec,
     ModelCheckpointID,
 )
-
 
 @dataclass(frozen=True, slots=True)
 class ModelCheckpointSpec:
@@ -25,38 +22,38 @@ class ModelCheckpointSpec:
     def name(self) -> str:
         return self.relative_path.name
 
-
 @dataclass(frozen=True, slots=True)
 class LTXLocalModelDeprecated:
     pass
-
 
 @dataclass(frozen=True, slots=True)
 class LTXLocalModelRelevant:
     upgrade_messages: dict[LTXLocalModelId, str]
 
-
 LTXLocalModelRelevance = LTXLocalModelDeprecated | LTXLocalModelRelevant
 
-
-@dataclass(frozen=True, slots=True)
 class LtxIcLorasSpec:
-    depth_cp: ModelCheckpointID
-    canny_cp: ModelCheckpointID
-    pose_cp: ModelCheckpointID
+    def __init__(self, depth_cp: ModelCheckpointID, canny_cp: ModelCheckpointID, pose_cp: ModelCheckpointID):
+        self.depth_cp = depth_cp
+        self.canny_cp = canny_cp
+        self.pose_cp = pose_cp
 
-
-@dataclass(frozen=True, slots=True)
 class LTXLocalModelSpec:
-    model_cp: ModelCheckpointID
-    upscale_cp: ModelCheckpointID
-    text_encoder_cp: ModelCheckpointID
-    ic_loras_spec: LtxIcLorasSpec
-    relevance: LTXLocalModelRelevance
-    supported_pipelines: tuple[
-        tuple[LTXVideoGenPipeline, LTXVideoGenerationSpec], ...
-    ]
-
+    def __init__(
+        self,
+        model_cp: ModelCheckpointID,
+        upscale_cp: ModelCheckpointID,
+        text_encoder_cp: ModelCheckpointID,
+        ic_loras_spec: LtxIcLorasSpec,
+        relevance: LTXLocalModelRelevance,
+        supported_pipelines: tuple[tuple[LTXVideoGenPipeline, LTXVideoGenerationSpec], ...],
+    ):
+        self.model_cp = model_cp
+        self.upscale_cp = upscale_cp
+        self.text_encoder_cp = text_encoder_cp
+        self.ic_loras_spec = ic_loras_spec
+        self.relevance = relevance
+        self.supported_pipelines = supported_pipelines
 
 def _resolution_spec(
     *,
@@ -66,9 +63,10 @@ def _resolution_spec(
         fps_to_durations={
             fps: list(durations)
             for fps, durations in fps_to_durations.items()
-        },
+        }
     )
 
+ALL_DURATIONS_1_TO_30 = tuple(range(1, 31))
 
 def get_model_cp_spec(cp_id: ModelCheckpointID) -> ModelCheckpointSpec:
     match cp_id:
@@ -114,9 +112,7 @@ def get_model_cp_spec(cp_id: ModelCheckpointID) -> ModelCheckpointSpec:
             )
         case "ltx-2.3-22b-ic-lora-union-control-ref0.5":
             return ModelCheckpointSpec(
-                relative_path=Path(
-                    "ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors"
-                ),
+                relative_path=Path("ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors"),
                 expected_size_bytes=654_465_352,
                 is_folder=False,
                 repo_id="Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control",
@@ -165,132 +161,40 @@ def get_model_cp_spec(cp_id: ModelCheckpointID) -> ModelCheckpointSpec:
         case _:
             assert_never(cp_id)
 
-
 def get_ltx_model_spec(model_id: LTXLocalModelId) -> LTXLocalModelSpec:
     fast_spec = LTXVideoGenerationSpec(
-        display_name="LTX-2.3 Fast",
+        display_name="LTX 2.3 (Fast)",
         supported_resolutions_durations={
-            "540p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12, 14, 16, 18, 20),
-                }
-            ),
-            "720p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12, 14, 16, 18, 20),
-                }
-            ),
-            "1080p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12, 14, 16, 18, 20),
-                }
-            ),
+            "4k": _resolution_spec(fps_to_durations={15: ALL_DURATIONS_1_TO_30, 24: ALL_DURATIONS_1_TO_30, 25: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30}),
+            "2k": _resolution_spec(fps_to_durations={15: ALL_DURATIONS_1_TO_30, 24: ALL_DURATIONS_1_TO_30, 25: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30}),
+            "1080p": _resolution_spec(fps_to_durations={15: ALL_DURATIONS_1_TO_30, 24: ALL_DURATIONS_1_TO_30, 25: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30, 50: ALL_DURATIONS_1_TO_30, 60: ALL_DURATIONS_1_TO_30}),
+            "720p": _resolution_spec(fps_to_durations={15: ALL_DURATIONS_1_TO_30, 24: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30, 50: ALL_DURATIONS_1_TO_30, 60: ALL_DURATIONS_1_TO_30, 120: ALL_DURATIONS_1_TO_30}),
+            "480p": _resolution_spec(fps_to_durations={15: ALL_DURATIONS_1_TO_30, 24: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30, 50: ALL_DURATIONS_1_TO_30, 60: ALL_DURATIONS_1_TO_30, 120: ALL_DURATIONS_1_TO_30, 240: ALL_DURATIONS_1_TO_30}),
         },
-        a2v_supported_resolutions_durations={
-            "540p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12, 14, 16, 18, 20),
-                }
-            ),
-            "720p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12, 14, 16, 18, 20),
-                }
-            ),
-            "1080p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12, 14, 16, 18, 20),
-                }
-            ),
-        },
+        a2v_supported_resolutions_durations=None
     )
 
     fast_hq_spec = LTXVideoGenerationSpec(
-        display_name="LTX-2.3 Fast HQ",
+        display_name="LTX 2.3 (Fast HQ)",
         supported_resolutions_durations={
-            "720p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12, 14),
-                    30: (5, 6, 8, 10, 12),
-                }
-            ),
-            "1080p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12),
-                    30: (5, 6, 8, 10),
-                }
-            ),
-            "1440p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10),
-                    30: (5, 6, 8, 10),
-                }
-            ),
-            "2160p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8),
-                    30: (5, 6, 8),
-                }
-            ),
+            "4k": _resolution_spec(fps_to_durations={15: ALL_DURATIONS_1_TO_30, 24: ALL_DURATIONS_1_TO_30, 25: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30}),
+            "2k": _resolution_spec(fps_to_durations={15: ALL_DURATIONS_1_TO_30, 24: ALL_DURATIONS_1_TO_30, 25: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30}),
+            "1080p": _resolution_spec(fps_to_durations={15: ALL_DURATIONS_1_TO_30, 24: ALL_DURATIONS_1_TO_30, 25: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30, 50: ALL_DURATIONS_1_TO_30, 60: ALL_DURATIONS_1_TO_30}),
+            "720p": _resolution_spec(fps_to_durations={15: ALL_DURATIONS_1_TO_30, 24: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30, 50: ALL_DURATIONS_1_TO_30, 60: ALL_DURATIONS_1_TO_30, 120: ALL_DURATIONS_1_TO_30}),
+            "480p": _resolution_spec(fps_to_durations={15: ALL_DURATIONS_1_TO_30, 24: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30, 50: ALL_DURATIONS_1_TO_30, 60: ALL_DURATIONS_1_TO_30, 120: ALL_DURATIONS_1_TO_30, 240: ALL_DURATIONS_1_TO_30}),
         },
-        a2v_supported_resolutions_durations={
-            "720p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12, 14),
-                    30: (5, 6, 8, 10, 12),
-                }
-            ),
-            "1080p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12),
-                    30: (5, 6, 8, 10),
-                }
-            ),
-        },
+        a2v_supported_resolutions_durations=None
     )
 
     pro_spec = LTXVideoGenerationSpec(
-        display_name="LTX-2.3 Pro",
+        display_name="LTX 2.3 (PRO)",
         supported_resolutions_durations={
-            "720p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12),
-                    30: (5, 6, 8, 10),
-                }
-            ),
-            "1080p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10),
-                    30: (5, 6, 8, 10),
-                }
-            ),
-            "1440p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10),
-                    30: (5, 6, 8),
-                }
-            ),
-            "2160p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8),
-                    30: (5, 6, 8),
-                }
-            ),
+            "2k": _resolution_spec(fps_to_durations={24: ALL_DURATIONS_1_TO_30, 25: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30}),
+            "1080p": _resolution_spec(fps_to_durations={24: ALL_DURATIONS_1_TO_30, 25: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30}),
+            "720p": _resolution_spec(fps_to_durations={24: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30, 50: ALL_DURATIONS_1_TO_30, 60: ALL_DURATIONS_1_TO_30}),
+            "480p": _resolution_spec(fps_to_durations={24: ALL_DURATIONS_1_TO_30, 30: ALL_DURATIONS_1_TO_30, 50: ALL_DURATIONS_1_TO_30, 60: ALL_DURATIONS_1_TO_30, 120: ALL_DURATIONS_1_TO_30}),
         },
-        a2v_supported_resolutions_durations={
-            "720p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10, 12),
-                    30: (5, 6, 8, 10),
-                }
-            ),
-            "1080p": _resolution_spec(
-                fps_to_durations={
-                    24: (5, 6, 8, 10),
-                    30: (5, 6, 8, 10),
-                }
-            ),
-        },
+        a2v_supported_resolutions_durations=None
     )
 
     common_ic_loras = LtxIcLorasSpec(
@@ -308,7 +212,7 @@ def get_ltx_model_spec(model_id: LTXLocalModelId) -> LTXLocalModelSpec:
                 ic_loras_spec=common_ic_loras,
                 relevance=LTXLocalModelRelevant(
                     upgrade_messages={
-                        "ltx-2.3-22b-dev": "Upgrade to Pro for higher quality outputs.",
+                        "ltx-2.3-22b-dev": "Upgrade to Pro for higher quality outputs."
                     }
                 ),
                 supported_pipelines=(
@@ -324,7 +228,7 @@ def get_ltx_model_spec(model_id: LTXLocalModelId) -> LTXLocalModelSpec:
                 ic_loras_spec=common_ic_loras,
                 relevance=LTXLocalModelRelevant(
                     upgrade_messages={
-                        "ltx-2.3-22b-distilled": "Switch to Fast for lower latency.",
+                        "ltx-2.3-22b-distilled": "Switch to Fast for lower latency."
                     }
                 ),
                 supported_pipelines=(
@@ -333,7 +237,6 @@ def get_ltx_model_spec(model_id: LTXLocalModelId) -> LTXLocalModelSpec:
             )
         case _:
             assert_never(model_id)
-
 
 ALL_LTX_LOCAL_MODEL_IDS: tuple[LTXLocalModelId, ...] = (
     "ltx-2.3-22b-distilled",

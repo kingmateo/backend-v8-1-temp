@@ -1,11 +1,8 @@
 from __future__ import annotations
-
 import logging
 from typing import ClassVar, Final, Iterator, Literal
-
 import torch
 from PIL import Image
-
 from services.hq_video_pipeline.hq_video_pipeline import HQVideoPipeline
 from services.interfaces import AudioOrNone, ImageConditioningInput
 from services.ltx_pipeline_common import LTXPipelineCommon
@@ -17,9 +14,7 @@ from services.services_utils import (
 )
 
 logger = logging.getLogger(__name__)
-
 PIPELINE_KIND: Final = "fast_hq"
-
 
 class LTXHQVideoPipeline(HQVideoPipeline):
     pipeline_kind: ClassVar[Literal["fast_hq"]] = PIPELINE_KIND
@@ -33,7 +28,7 @@ class LTXHQVideoPipeline(HQVideoPipeline):
         streaming_prefetch_count: int | None,
         hq_steps: int = 16,
         hq_cfg_scale: float = 7.0,
-    ):
+    ) -> None:
         self.hq_steps = hq_steps
         self.hq_cfg_scale = hq_cfg_scale
         self.common_pipeline = LTXPipelineCommon(
@@ -53,7 +48,7 @@ class LTXHQVideoPipeline(HQVideoPipeline):
         streaming_prefetch_count: int | None,
         hq_steps: int = 16,
         hq_cfg_scale: float = 7.0,
-    ) -> "LTXHQVideoPipeline":
+    ) -> LTXHQVideoPipeline:
         return LTXHQVideoPipeline(
             checkpoint_path=checkpoint_path,
             gemma_root=gemma_root,
@@ -84,7 +79,6 @@ class LTXHQVideoPipeline(HQVideoPipeline):
             tiling_factor=self.common_pipeline.tiling_factor,
         )
         n_chunks = video_chunks_number(num_frames=num_frames)
-
         for frame_index, latents in enumerate(
             self.common_pipeline.inference(
                 prompt=prompt,
