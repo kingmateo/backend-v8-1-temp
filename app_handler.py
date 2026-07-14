@@ -1,20 +1,17 @@
 # app_handler.py
-
 from __future__ import annotations
 
 import threading
 from collections.abc import Iterator
-
 import torch
-
-from api_types import GenerateVideoRequest
-from backend.handlers.generation_handler import GenerationHandler
-from backend.handlers.pipelines_handler import PipelinesHandler
-from backend.handlers.text_handler import TextHandler
-from backend.handlers.video_generation_handler import VideoGenerationHandler
-from backend.runtime_config.runtime_config import RuntimeConfig
-from backend.state.app_state import AppState
-
+from api_types import GenerateVideoRequest, GenerateVideoResponse
+from handlers.generation_handler import GenerationHandler
+from handlers.pipelines_handler import PipelinesHandler
+from handlers.text_handler import TextHandler
+from handlers.video_generation_handler import VideoGenerationHandler
+from runtime_config.runtime_config import RuntimeConfig
+from state.app_state import AppState
+from api_model_specs import build_generate_video_model_specs_response
 
 class AppHandler:
     def __init__(
@@ -43,11 +40,10 @@ class AppHandler:
         width: int,
         num_frames: int,
         frame_rate: float,
-    ) -> Iterator[torch.Tensor]:
+    ) -> GenerateVideoResponse:
         with self._lock:
-            return self._video_generation_handler.generate(
-                req, seed, height, width, num_frames, frame_rate
-            )
+            return self._video_generation_handler.generate_video(req)
 
-    def get_model_specs(self) -> dict[str, list[dict]]:
-        return self._video_generation_handler.get_model_specs()
+    def get_model_specs(self) -> dict:
+        response = build_generate_video_model_specs_response()
+        return response.model_dump()
