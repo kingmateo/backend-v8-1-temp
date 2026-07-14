@@ -1,8 +1,13 @@
+# services/pro_video_pipeline/ltx_pro_video_pipeline.py
+
 from __future__ import annotations
+
 import logging
 from typing import ClassVar, Final, Iterator, Literal
+
 import torch
 from PIL import Image
+
 from services.interfaces import AudioOrNone, ImageConditioningInput
 from services.ltx_pipeline_common import LTXPipelineCommon
 from services.pro_video_pipeline.pro_video_pipeline import ProVideoPipeline
@@ -14,7 +19,9 @@ from services.services_utils import (
 )
 
 logger = logging.getLogger(__name__)
+
 PIPELINE_KIND: Final = "pro"
+
 
 class LTXProVideoPipeline(ProVideoPipeline):
     pipeline_kind: ClassVar[Literal["pro"]] = PIPELINE_KIND
@@ -48,7 +55,7 @@ class LTXProVideoPipeline(ProVideoPipeline):
         streaming_prefetch_count: int | None,
         pro_steps: int = 32,
         pro_cfg_scale: float = 9.0,
-    ) -> LTXProVideoPipeline:
+    ) -> "LTXProVideoPipeline":
         return LTXProVideoPipeline(
             checkpoint_path=checkpoint_path,
             gemma_root=gemma_root,
@@ -79,6 +86,7 @@ class LTXProVideoPipeline(ProVideoPipeline):
             tiling_factor=self.common_pipeline.tiling_factor,
         )
         n_chunks = video_chunks_number(num_frames=num_frames)
+
         for frame_index, latents in enumerate(
             self.common_pipeline.inference(
                 prompt=prompt,
