@@ -16,6 +16,7 @@ from runtime_config.model_download_specs import (
     get_ltx_model_spec,
 )
 
+# همه اعداد ۱ تا ۳۰
 ALL_DURATIONS_1_TO_30: Final = tuple(range(1, 31))
 
 
@@ -28,10 +29,7 @@ def _resolution_spec(*, durations_by_fps: dict[int, list[int]]) -> LTXVideoGener
     )
 
 
-# ============================================================
-#  مشخصات مدل‌های API (Fast, Fast HQ, PRO)
-# ============================================================
-
+# مشخصات مدل‌های API (Fast, Fast HQ, PRO)
 ltx_api_model_specs: Final[tuple[tuple[LTXVideoGenPipeline, LTXVideoGenerationSpec], ...]] = (
 
     # ---------- حالت Fast ----------
@@ -205,10 +203,6 @@ def build_generate_video_model_specs_response() -> GenerateVideoModelsSpecsRespo
     return GenerateVideoModelsSpecsResponse(
         local_models=get_local_video_generation_model_specs(),
         api_models=get_api_video_generation_model_specs(),
-        upscalers=[
-            "ltx-2.3-spatial-upscaler-x1.5-1.0",
-            "ltx-2.3-spatial-upscaler-x2-1.1",
-        ],
     )
 
 
