@@ -88,6 +88,11 @@ class LTXVideoGenerationModelSpecItem(BaseModel):
 class GenerateVideoModelsSpecsResponse(BaseModel):
     local_models: list[LTXVideoGenerationModelSpecItem]
     api_models: list[LTXVideoGenerationModelSpecItem]
+    # ✅ لیست آپ‌اسکیل‌های قابل انتخاب
+    upscalers: list[ModelCheckpointID] = [
+        "ltx-2.3-spatial-upscaler-x1.5-1.0",
+        "ltx-2.3-spatial-upscaler-x2-1.1",
+    ]
 
 
 class GenerateVideoRequest(BaseModel):
@@ -95,7 +100,7 @@ class GenerateVideoRequest(BaseModel):
     prompt: NonEmptyPrompt
     resolution: LTXVideoGenResolution = "1080p"
     model: LTXVideoGenPipeline = "fast"
-    upscaler: ModelCheckpointID = "ltx-2.3-spatial-upscaler-x1.5-1.0"  # ✅ تغییر داده شد
+    upscaler: ModelCheckpointID = "ltx-2.3-spatial-upscaler-x1.5-1.0"
     cameraMotion: VideoCameraMotion = "none"
     duration: LTXVideoGenDuration = 5
     fps: LTXVideoGenFps = 24
