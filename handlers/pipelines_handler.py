@@ -9,19 +9,16 @@ from typing import TYPE_CHECKING, ClassVar, Literal, TypeAlias
 import torch
 
 from api_types import GenerateVideoRequest, ImageConditioningInput
-from backend.handlers.base import StateHandlerBase
-
-# این سه کلاس باید در مسیرهای مشخص‌شده وجود داشته باشند
-from services.fast_video_pipeline import LTXFastVideoPipeline
-from services.hq_video_pipeline import LTXHQVideoPipeline
-from services.pro_video_pipeline import LTXProVideoPipeline
-
-from backend.runtime_config.runtime_config import RuntimeConfig
-from backend.services.interfaces import AudioOrNone, VideoPipeline
-from backend.services.services_utils import device_supports_fp8
+from handlers.base import StateHandlerBase
+from services.fast_video_pipeline import FastVideoPipeline
+from services.hq_video_pipeline import HQVideoPipeline
+from services.pro_video_pipeline import ProVideoPipeline
+from services.interfaces import AudioOrNone, VideoPipeline
+from services.services_utils import device_supports_fp8
+from runtime_config.runtime_config import RuntimeConfig
 
 if TYPE_CHECKING:
-    from backend.state.app_state import AppState
+    from state.app_state import AppState
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +27,9 @@ PipelineKind: TypeAlias = Literal["fast", "fast_hq", "pro"]
 
 class PipelinesHandler(StateHandlerBase):
     pipeline_kind_to_class: ClassVar[dict[PipelineKind, type[VideoPipeline]]] = {
-        "fast": LTXFastVideoPipeline,
-        "fast_hq": LTXHQVideoPipeline,
-        "pro": LTXProVideoPipeline,
+        "fast": FastVideoPipeline,
+        "fast_hq": HQVideoPipeline,
+        "pro": ProVideoPipeline,
     }
 
     def __init__(self, state: "AppState", lock: threading.RLock, config: RuntimeConfig) -> None:
@@ -57,7 +54,7 @@ class PipelinesHandler(StateHandlerBase):
 
                 pipeline_class = self.pipeline_kind_to_class[pipeline_kind]
 
-                # ✅ انتخاب مسیر checkpoint بر اساس نوع pipeline
+                # انتخاب مسیر checkpoint بر اساس نوع pipeline
                 if pipeline_kind in ("fast", "fast_hq"):
                     checkpoint_path = self.config.pipeline_checkpoint_path_fast
                 elif pipeline_kind == "pro":
@@ -70,13 +67,12 @@ class PipelinesHandler(StateHandlerBase):
                 device = self.config.device
                 streaming_prefetch_count = self.config.streaming_prefetch_count
 
-                # پارامترهای اضافی بر اساس نوع
                 if pipeline_kind == "fast":
                     pipeline = pipeline_class.create(
                         checkpoint_path=checkpoint_path,
                         gemma_root=gemma_root,
                         upsampler_path=upsampler_path,
-                        device=device,
+                        device=torch.device(device),
                         streaming_prefetch_count=streaming_prefetch_count,
                     )
                 elif pipeline_kind == "fast_hq":
@@ -84,20 +80,16 @@ class PipelinesHandler(StateHandlerBase):
                         checkpoint_path=checkpoint_path,
                         gemma_root=gemma_root,
                         upsampler_path=upsampler_path,
-                        device=device,
+                        device=torch.device(device),
                         streaming_prefetch_count=streaming_prefetch_count,
-                        hq_steps=self.config.pipeline_hq_steps,
-                        hq_cfg_scale=self.config.pipeline_hq_cfg_scale,
                     )
                 elif pipeline_kind == "pro":
                     pipeline = pipeline_class.create(
                         checkpoint_path=checkpoint_path,
                         gemma_root=gemma_root,
                         upsampler_path=upsampler_path,
-                        device=device,
+                        device=torch.device(device),
                         streaming_prefetch_count=streaming_prefetch_count,
-                        pro_steps=self.config.pipeline_pro_steps,
-                        pro_cfg_scale=self.config.pipeline_pro_cfg_scale,
                     )
                 else:
                     raise ValueError(f"Unknown pipeline kind: {pipeline_kind}")
