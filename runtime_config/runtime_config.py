@@ -26,10 +26,10 @@ class RuntimeConfig:
     # Model config
     models_dir: Path = field(init=False)
 
-    # ✅ مسیرهای جداگانه برای مدل‌های مختلف
-    pipeline_checkpoint_path_fast: str = ""   # مسیر مدل distilled (برای Fast و Fast HQ)
-    pipeline_checkpoint_path_pro: str = ""    # مسیر مدل dev (برای PRO)
-    pipeline_upsampler_path: str = ""
+    # مسیرهای مدل‌ها (در صورت خالی بودن، به‌صورت خودکار از models_dir پر می‌شوند)
+    pipeline_checkpoint_path_fast: str = ""   # نام پیش‌فرض: ltx-2.3-22b-distilled.safetensors
+    pipeline_checkpoint_path_pro: str = ""    # نام پیش‌فرض: ltx-2.3-22b-dev.safetensors
+    pipeline_upsampler_path: str = ""         # نام پیش‌فرض: ltx-2.3-spatial-upscaler-x1.5-1.0.safetensors
     gemma_root: str | None = None
 
     # Pipeline specific config
@@ -52,6 +52,19 @@ class RuntimeConfig:
     def __post_init__(self) -> None:
         self.models_dir = self.app_dir / "models"
 
+        # ✅ تنظیم خودکار مسیرها اگر خالی باشند
+        if not self.pipeline_checkpoint_path_fast:
+            self.pipeline_checkpoint_path_fast = str(self.models_dir / "ltx-2.3-22b-distilled.safetensors")
+            logger.info("Auto-set fast checkpoint path: %s", self.pipeline_checkpoint_path_fast)
+
+        if not self.pipeline_checkpoint_path_pro:
+            self.pipeline_checkpoint_path_pro = str(self.models_dir / "ltx-2.3-22b-dev.safetensors")
+            logger.info("Auto-set pro checkpoint path: %s", self.pipeline_checkpoint_path_pro)
+
+        if not self.pipeline_upsampler_path:
+            self.pipeline_upsampler_path = str(self.models_dir / "ltx-2.3-spatial-upscaler-x1.5-1.0.safetensors")
+            logger.info("Auto-set upsampler path: %s", self.pipeline_upsampler_path)
+
         if self.device == "cuda" and not torch.cuda.is_available():
             logger.warning("CUDA requested but not available, falling back to CPU")
             self.device = "cpu"
@@ -72,26 +85,26 @@ def load_runtime_config(app_dir: Path, lock: RLock) -> RuntimeConfig:
     config_path = app_dir / "runtime_config.yaml"
     base_config = RuntimeConfig(app_dir=app_dir)
 
-    if not config_path.exists():
-        logger.info("runtime_config.yaml not found, using default config")
-        base_config.models_dir.mkdir(parents=True, exist_ok=True)
-        return base_config
+    # اگر فایل YAML وجود داشت، از آن بخوان و با مقادیر پیش‌فرض ادغام کن
+    if config_path.exists():
+        try:
+            with config_path.open("r", encoding="utf-8") as f:
+                config_dict = yaml.safe_load(f) or {}
 
-    try:
-        with config_path.open("r", encoding="utf-8") as f:
-            config_dict = yaml.safe_load(f) or {}
+            if not isinstance(config_dict, dict):
+                raise TypeError("runtime_config.yaml must contain a mapping")
 
-        if not isinstance(config_dict, dict):
-            raise TypeError("runtime_config.yaml must contain a mapping")
+            with lock:
+                config = RuntimeConfig(app_dir=app_dir, **config_dict)  # type: ignore[arg-type]
 
-        with lock:
-            config = RuntimeConfig(app_dir=app_dir, **config_dict)  # type: ignore[arg-type]
+            logger.info("Loaded runtime config from %s", config_path)
+            return config
 
-        logger.info("Loaded runtime config from %s", config_path)
+        except Exception as e:
+            logger.exception("Failed to load runtime config: %s", e)
+            # در صورت خطا، از مقادیر پیش‌فرض استفاده می‌کنیم
+            logger.info("Using default config (without YAML)")
 
-    except Exception as e:
-        logger.exception("Failed to load runtime config: %s", e)
-        config = base_config
-
-    config.models_dir.mkdir(parents=True, exist_ok=True)
-    return config
+    # اگر فایل وجود نداشت یا خطا داشت، از پیش‌فرض‌های base_config استفاده کن
+    base_config.models_dir.mkdir(parents=True, exist_ok=True)
+    return base_config
