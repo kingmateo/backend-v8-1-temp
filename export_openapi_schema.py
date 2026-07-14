@@ -1,99 +1,54 @@
-"""Export backend OpenAPI schema without running the real backend server.
-
-This script boots the FastAPI app with fake services (same pattern used in
-backend tests) and writes a deterministic OpenAPI JSON file for frontend type
-generation.
-"""
+# export_openapi_schema.py
 
 from __future__ import annotations
 
-import argparse
 import json
-import tempfile
 from pathlib import Path
-from typing import Any, cast
 
-from app_factory import create_app
-from app_handler import ServiceBundle
-from runtime_config.port_constant import PORT
-from state import RuntimeConfig, build_initial_state
+from runtime_config.runtime_config import RuntimeConfig, load_runtime_config
+from runtime_config.runtime_policy import LocalGenerationMode
 from state.app_settings import AppSettings
-from tests.fake_camera_motion_prompts import FAKE_CAMERA_MOTION_PROMPTS
-from tests.fakes.services import FakeServices
-import torch
-
-DEFAULT_NEGATIVE_PROMPT = "openapi-export"
-DEFAULT_OUTPUT_PATH = Path(__file__).resolve().parents[1] / "frontend" / "generated" / "backend-openapi.json"
-
-
-def _build_schema() -> dict[str, object]:
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_root = Path(tmp_dir)
-        app_data = tmp_root / "app_data"
-        default_models_dir = app_data / "models"
-        outputs_dir = tmp_root / "outputs"
-        for directory in (app_data, default_models_dir, outputs_dir):
-            directory.mkdir(parents=True, exist_ok=True)
-
-        config = RuntimeConfig(
-            device=torch.device("cpu"),
-            app_data_dir=app_data,
-            default_models_dir=default_models_dir,
-            outputs_dir=outputs_dir,
-            settings_file=app_data / "settings.json",
-            ltx_api_base_url="https://api.ltx.video",
-            local_generations_mode="full_models_loading",
-            use_sage_attention=False,
-            camera_motion_prompts=FAKE_CAMERA_MOTION_PROMPTS,
-            default_negative_prompt=DEFAULT_NEGATIVE_PROMPT,
-            dev_mode=False,
-            hf_oauth_client_id="test-client-id",
-            backend_port=PORT,
-        )
-
-        fake = FakeServices()
-        bundle = ServiceBundle(
-            http=cast(Any, fake.http),
-            gpu_cleaner=cast(Any, fake.gpu_cleaner),
-            model_downloader=cast(Any, fake.model_downloader),
-            gpu_info=cast(Any, fake.gpu_info),
-            video_processor=cast(Any, fake.video_processor),
-            text_encoder=cast(Any, fake.text_encoder),
-            task_runner=cast(Any, fake.task_runner),
-            ltx_api_client=cast(Any, fake.ltx_api_client),
-            zit_api_client=cast(Any, fake.zit_api_client),
-            fast_video_pipeline_class=cast(Any, type(fake.fast_video_pipeline)),
-            image_generation_pipeline_class=cast(Any, type(fake.image_generation_pipeline)),
-            ic_lora_pipeline_class=cast(Any, type(fake.ic_lora_pipeline)),
-            depth_processor_pipeline_class=cast(Any, type(fake.depth_processor_pipeline)),
-            pose_processor_pipeline_class=cast(Any, type(fake.pose_processor_pipeline)),
-            a2v_pipeline_class=cast(Any, type(fake.a2v_pipeline)),
-            retake_pipeline_class=cast(Any, type(fake.retake_pipeline)),
-        )
-
-        handler = build_initial_state(config, AppSettings(), service_bundle=bundle)
-        app = create_app(handler=handler)
-        return app.openapi()
+from app_factory import create_app
+from app_handler import build_default_service_bundle, build_initial_state
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Export backend OpenAPI schema to JSON.")
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=DEFAULT_OUTPUT_PATH,
-        help=f"Output schema JSON path (default: {DEFAULT_OUTPUT_PATH})",
+    dummy_config = RuntimeConfig(
+        device="cpu",
+        app_data_dir=Path("dummy_app_data"),
+        default_models_dir=Path("dummy_models"),
+        outputs_dir=Path("dummy_outputs"),
+        settings_file=Path("dummy_settings.yaml"),
+        ltx_api_base_url="http://dummy.api",
+        local_generations_mode=LocalGenerationMode.performance,
+        use_sage_attention=False,
+        camera_motion_prompts={},
+        default_negative_prompt="",
+        dev_mode=False,
+        backend_port=8000,
     )
-    args = parser.parse_args()
 
-    schema = _build_schema()
-    output = args.output.resolve()
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(schema, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    dummy_settings = AppSettings(
+        use_torch_compile=True,
+        force_api_generations=False,
+        local_generations_mode=LocalGenerationMode.performance,
     )
-    print(f"Wrote OpenAPI schema to {output}")
+
+    services = build_default_service_bundle()
+    handler = build_initial_state(
+        config=dummy_config,
+        default_settings=dummy_settings,
+        services=services,
+    )
+
+    app = create_app(handler=handler, title="LTX Video Generation Server")
+
+    openapi_schema = app.openapi()
+    output_path = Path("openapi.json")
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(openapi_schema, f, indent=2, ensure_ascii=False)
+
+    print(f"OpenAPI schema generated successfully at {output_path.resolve()}")
 
 
 if __name__ == "__main__":
