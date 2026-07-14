@@ -11,10 +11,10 @@ import torch
 from api_types import GenerateVideoRequest, ImageConditioningInput
 from backend.handlers.base import StateHandlerBase
 
-# این سه کلاس باید در backend.handlers.pipelines تعریف شده باشند
-from backend.handlers.pipelines.fast_video_pipeline import LTXFastVideoPipeline
-from backend.handlers.pipelines.hq_video_pipeline import LTXHQVideoPipeline
-from backend.handlers.pipelines.pro_video_pipeline import LTXProVideoPipeline
+# این سه کلاس باید در مسیرهای مشخص‌شده وجود داشته باشند
+from services.fast_video_pipeline import LTXFastVideoPipeline
+from services.hq_video_pipeline import LTXHQVideoPipeline
+from services.pro_video_pipeline import LTXProVideoPipeline
 
 from backend.runtime_config.runtime_config import RuntimeConfig
 from backend.services.interfaces import AudioOrNone, VideoPipeline
@@ -70,6 +70,7 @@ class PipelinesHandler(StateHandlerBase):
                 device = self.config.device
                 streaming_prefetch_count = self.config.streaming_prefetch_count
 
+                # پارامترهای اضافی بر اساس نوع
                 if pipeline_kind == "fast":
                     pipeline = pipeline_class.create(
                         checkpoint_path=checkpoint_path,
@@ -78,7 +79,6 @@ class PipelinesHandler(StateHandlerBase):
                         device=device,
                         streaming_prefetch_count=streaming_prefetch_count,
                     )
-
                 elif pipeline_kind == "fast_hq":
                     pipeline = pipeline_class.create(
                         checkpoint_path=checkpoint_path,
@@ -89,7 +89,6 @@ class PipelinesHandler(StateHandlerBase):
                         hq_steps=self.config.pipeline_hq_steps,
                         hq_cfg_scale=self.config.pipeline_hq_cfg_scale,
                     )
-
                 elif pipeline_kind == "pro":
                     pipeline = pipeline_class.create(
                         checkpoint_path=checkpoint_path,
@@ -100,7 +99,6 @@ class PipelinesHandler(StateHandlerBase):
                         pro_steps=self.config.pipeline_pro_steps,
                         pro_cfg_scale=self.config.pipeline_pro_cfg_scale,
                     )
-
                 else:
                     raise ValueError(f"Unknown pipeline kind: {pipeline_kind}")
 
@@ -119,7 +117,6 @@ class PipelinesHandler(StateHandlerBase):
             pipeline = self._pipelines[pipeline_kind]
             if pipeline is not None:
                 logger.info("Unloading pipeline: %s", pipeline_kind)
-                # پاک کردن حافظه GPU
                 if hasattr(pipeline, "unload"):
                     pipeline.unload()
                 self._pipelines[pipeline_kind] = None
