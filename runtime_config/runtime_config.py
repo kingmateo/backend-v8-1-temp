@@ -4,11 +4,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from threading import RLock
 from typing import Literal
 
 import torch
-import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +24,18 @@ class RuntimeConfig:
     # Model config
     models_dir: Path = field(init=False)
 
-    # مسیرهای مدل‌ها (در صورت خالی بودن، به‌صورت خودکار از models_dir پر می‌شوند)
-    pipeline_checkpoint_path_fast: str = ""   # نام پیش‌فرض: ltx-2.3-22b-distilled.safetensors
-    pipeline_checkpoint_path_pro: str = ""    # نام پیش‌فرض: ltx-2.3-22b-dev.safetensors
-    pipeline_upsampler_path: str = ""         # نام پیش‌فرض: ltx-2.3-spatial-upscaler-x1.5-1.0.safetensors
+    # ======================================================
+    # نام فایل‌های مدل (بر اساس اطلاعات Hugging Face)
+    # ======================================================
+    FAST_MODEL_FILENAME = "ltx-2.3-22b-distilled.safetensors"
+    PRO_MODEL_FILENAME = "ltx-2.3-22b-dev.safetensors"
+    UPSCALER_MODEL_FILENAME = "ltx-2.3-spatial-upscaler-x1.5-1.0.safetensors"
+
+    # این فیلدها بعداً در __post_init__ مقداردهی می‌شوند
+    pipeline_checkpoint_path_fast: str = ""
+    pipeline_checkpoint_path_pro: str = ""
+    pipeline_upsampler_path: str = ""
+
     gemma_root: str | None = None
 
     # Pipeline specific config
@@ -50,21 +56,40 @@ class RuntimeConfig:
     streaming_prefetch_count: int | None = None
 
     def __post_init__(self) -> None:
+        # 1. تنظیم پوشه مدل‌ها
         self.models_dir = self.app_dir / "models"
 
-        # ✅ تنظیم خودکار مسیرها اگر خالی باشند
-        if not self.pipeline_checkpoint_path_fast:
-            self.pipeline_checkpoint_path_fast = str(self.models_dir / "ltx-2.3-22b-distilled.safetensors")
-            logger.info("Auto-set fast checkpoint path: %s", self.pipeline_checkpoint_path_fast)
+        # 2. ساخت مسیر کامل برای هر فایل مدل
+        fast_model_path = self.models_dir / self.FAST_MODEL_FILENAME
+        pro_model_path = self.models_dir / self.PRO_MODEL_FILENAME
+        upscaler_model_path = self.models_dir / self.UPSCALER_MODEL_FILENAME
 
-        if not self.pipeline_checkpoint_path_pro:
-            self.pipeline_checkpoint_path_pro = str(self.models_dir / "ltx-2.3-22b-dev.safetensors")
-            logger.info("Auto-set pro checkpoint path: %s", self.pipeline_checkpoint_path_pro)
+        # 3. بررسی وجود فایل‌ها و مقداردهی فیلدها
+        if not fast_model_path.exists():
+            raise FileNotFoundError(
+                f"مدل Fast (Distilled) در مسیر زیر پیدا نشد:\n{fast_model_path}\n"
+                f"لطفاً فایل '{self.FAST_MODEL_FILENAME}' را از آدرس زیر دانلود و در این پوشه قرار دهید:\n"
+                "https://huggingface.co/Lightricks/LTX-2.3/tree/main"
+            )
+        self.pipeline_checkpoint_path_fast = str(fast_model_path)
 
-        if not self.pipeline_upsampler_path:
-            self.pipeline_upsampler_path = str(self.models_dir / "ltx-2.3-spatial-upscaler-x1.5-1.0.safetensors")
-            logger.info("Auto-set upsampler path: %s", self.pipeline_upsampler_path)
+        if not pro_model_path.exists():
+            raise FileNotFoundError(
+                f"مدل PRO (Dev) در مسیر زیر پیدا نشد:\n{pro_model_path}\n"
+                f"لطفاً فایل '{self.PRO_MODEL_FILENAME}' را از آدرس زیر دانلود و در این پوشه قرار دهید:\n"
+                "https://huggingface.co/Lightricks/LTX-2.3/tree/main"
+            )
+        self.pipeline_checkpoint_path_pro = str(pro_model_path)
 
+        if not upscaler_model_path.exists():
+            raise FileNotFoundError(
+                f"مدل Upscaler در مسیر زیر پیدا نشد:\n{upscaler_model_path}\n"
+                f"لطفاً فایل '{self.UPSCALER_MODEL_FILENAME}' را از آدرس زیر دانلود و در این پوشه قرار دهید:\n"
+                "https://huggingface.co/Lightricks/LTX-2.3/tree/main"
+            )
+        self.pipeline_upsampler_path = str(upscaler_model_path)
+
+        # 4. تنظیمات مربوط به دستگاه
         if self.device == "cuda" and not torch.cuda.is_available():
             logger.warning("CUDA requested but not available, falling back to CPU")
             self.device = "cpu"
@@ -74,6 +99,7 @@ class RuntimeConfig:
 
         logger.info("Running on %s", self.device)
 
+        # 5. تنظیمات مربوط به Prefetch
         self.streaming_prefetch_count = {
             "performance": 2,
             "balanced": 1,
@@ -81,30 +107,12 @@ class RuntimeConfig:
         }[self.local_generations_mode]
 
 
-def load_runtime_config(app_dir: Path, lock: RLock) -> RuntimeConfig:
-    config_path = app_dir / "runtime_config.yaml"
-    base_config = RuntimeConfig(app_dir=app_dir)
-
-    # اگر فایل YAML وجود داشت، از آن بخوان و با مقادیر پیش‌فرض ادغام کن
-    if config_path.exists():
-        try:
-            with config_path.open("r", encoding="utf-8") as f:
-                config_dict = yaml.safe_load(f) or {}
-
-            if not isinstance(config_dict, dict):
-                raise TypeError("runtime_config.yaml must contain a mapping")
-
-            with lock:
-                config = RuntimeConfig(app_dir=app_dir, **config_dict)  # type: ignore[arg-type]
-
-            logger.info("Loaded runtime config from %s", config_path)
-            return config
-
-        except Exception as e:
-            logger.exception("Failed to load runtime config: %s", e)
-            # در صورت خطا، از مقادیر پیش‌فرض استفاده می‌کنیم
-            logger.info("Using default config (without YAML)")
-
-    # اگر فایل وجود نداشت یا خطا داشت، از پیش‌فرض‌های base_config استفاده کن
-    base_config.models_dir.mkdir(parents=True, exist_ok=True)
-    return base_config
+# ======================================================
+# تابع سازنده جدید (جایگزین load_runtime_config)
+# ======================================================
+def create_runtime_config(app_dir: Path) -> RuntimeConfig:
+    """یک نمونه از RuntimeConfig را با بررسی خودکار مدل‌ها ایجاد می‌کند."""
+    config = RuntimeConfig(app_dir=app_dir)
+    # اطمینان از وجود پوشه models (اگرچه بررسی فایل‌ها بعداً انجام می‌شود)
+    config.models_dir.mkdir(parents=True, exist_ok=True)
+    return config
