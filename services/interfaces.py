@@ -5,12 +5,8 @@ from abc import abstractmethod
 from collections.abc import Iterator
 from typing import Protocol, runtime_checkable
 
-from api_types import (
-    GenerateVideoResponse,
-    ImageConditioningInput,
-    LTXVideoGenResolution,
-)
-from services.services_utils import AudioOrNone, TilingConfigType
+from api_types import GenerateVideoRequest, ImageConditioningInput
+from services.services_utils import AudioOrNone
 
 
 @runtime_checkable
@@ -18,21 +14,12 @@ class VideoPipeline(Protocol):
     @abstractmethod
     def generate(
         self,
-        prompt: str,
-        seed: int,
-        height: int,
-        width: int,
-        num_frames: int,
-        frame_rate: float,
-        images: list[ImageConditioningInput] | None,
-        audio: AudioOrNone,
-        camera_motion: str,
-        negative_prompt: str,
-        tiling_config: TilingConfigType | None,
-        resolution: LTXVideoGenResolution | None,
-        upscaler: str | None,
-    ) -> Iterator[torch.Tensor] | GenerateVideoResponse:
-        """تولید ویدئو"""
+        request: GenerateVideoRequest,
+        audio: AudioOrNone = None,
+        image_conditioning: ImageConditioningInput | None = None,
+        progress_callback=None,
+    ) -> Iterator[bytes]:
+        """تولید ویدئو و بازگشت به‌صورت جریانی"""
         ...
 
     @abstractmethod
@@ -44,14 +31,3 @@ class VideoPipeline(Protocol):
     def compile_transformer(self) -> None:
         """کامپایل Transformer"""
         ...
-
-
-__all__ = [
-    "AudioOrNone",
-    "ImageConditioningInput",
-    "Iterator",
-    "LTXVideoGenResolution",
-    "GenerateVideoResponse",
-    "TilingConfigType",
-    "VideoPipeline",
-]
