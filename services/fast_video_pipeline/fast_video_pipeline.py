@@ -1,18 +1,13 @@
-"""Fast video pipeline protocol definitions."""
-
+# services/fast_video_pipeline/fast_video_pipeline.py
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Literal, Protocol
+from collections.abc import Iterator
+from typing import Protocol
 
-from api_types import ImageConditioningInput
-
-if TYPE_CHECKING:
-    import torch
+from api_types import AudioOrNone, GenerateVideoRequest, ImageConditioningInput
 
 
 class FastVideoPipeline(Protocol):
-    pipeline_kind: ClassVar[Literal["fast"]]
-
     @staticmethod
     def create(
         checkpoint_path: str,
@@ -20,24 +15,14 @@ class FastVideoPipeline(Protocol):
         upsampler_path: str,
         device: torch.device,
         streaming_prefetch_count: int | None,
-    ) -> "FastVideoPipeline":
+    ) -> FastVideoPipeline:
         ...
 
     def generate(
         self,
-        prompt: str,
-        seed: int,
-        height: int,
-        width: int,
-        num_frames: int,
-        frame_rate: float,
-        images: list[ImageConditioningInput],
-        output_path: str,
-    ) -> None:
-        ...
-
-    def warmup(self, output_path: str) -> None:
-        ...
-
-    def compile_transformer(self) -> None:
+        request: GenerateVideoRequest,
+        audio: AudioOrNone = None,
+        image_conditioning: ImageConditioningInput | None = None,
+        progress_callback=None,
+    ) -> Iterator[bytes]:
         ...
