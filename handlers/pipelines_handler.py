@@ -8,13 +8,12 @@ from typing import TYPE_CHECKING, ClassVar, Literal, TypeAlias
 
 import torch
 
-from api_types import GenerateVideoRequest, ImageConditioningInput
+from api_types import AudioOrNone, GenerateVideoRequest, ImageConditioningInput
 from handlers.base import StateHandlerBase
 from services.fast_video_pipeline import FastVideoPipeline
 from services.hq_video_pipeline import HQVideoPipeline
 from services.pro_video_pipeline import ProVideoPipeline
-from services.interfaces import AudioOrNone, VideoPipeline
-from services.services_utils import device_supports_fp8
+from services.interfaces import VideoPipeline
 from runtime_config.runtime_config import RuntimeConfig
 
 if TYPE_CHECKING:
@@ -67,6 +66,7 @@ class PipelinesHandler(StateHandlerBase):
                 device = self.config.device
                 streaming_prefetch_count = self.config.streaming_prefetch_count
 
+                # ایجاد Pipeline با پارامترهای مناسب
                 if pipeline_kind == "fast":
                     pipeline = pipeline_class.create(
                         checkpoint_path=checkpoint_path,
@@ -82,6 +82,8 @@ class PipelinesHandler(StateHandlerBase):
                         upsampler_path=upsampler_path,
                         device=torch.device(device),
                         streaming_prefetch_count=streaming_prefetch_count,
+                        hq_steps=self.config.pipeline_hq_steps,
+                        hq_cfg_scale=self.config.pipeline_hq_cfg_scale,
                     )
                 elif pipeline_kind == "pro":
                     pipeline = pipeline_class.create(
@@ -90,6 +92,8 @@ class PipelinesHandler(StateHandlerBase):
                         upsampler_path=upsampler_path,
                         device=torch.device(device),
                         streaming_prefetch_count=streaming_prefetch_count,
+                        pro_steps=self.config.pipeline_pro_steps,
+                        pro_cfg_scale=self.config.pipeline_pro_cfg_scale,
                     )
                 else:
                     raise ValueError(f"Unknown pipeline kind: {pipeline_kind}")
