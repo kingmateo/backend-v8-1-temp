@@ -24,9 +24,7 @@ class RuntimeConfig:
     # Model config
     models_dir: Path = field(init=False)
 
-    # ======================================================
     # نام فایل‌های مدل (بر اساس اطلاعات Hugging Face)
-    # ======================================================
     FAST_MODEL_FILENAME = "ltx-2.3-22b-distilled.safetensors"
     PRO_MODEL_FILENAME = "ltx-2.3-22b-dev.safetensors"
     UPSCALER_MODEL_FILENAME = "ltx-2.3-spatial-upscaler-x1.5-1.0.safetensors"
@@ -107,12 +105,8 @@ class RuntimeConfig:
         }[self.local_generations_mode]
 
 
-# ======================================================
-# تابع سازنده جدید (جایگزین load_runtime_config)
-# ======================================================
 def create_runtime_config(app_dir: Path) -> RuntimeConfig:
     """یک نمونه از RuntimeConfig را با بررسی خودکار مدل‌ها ایجاد می‌کند."""
     config = RuntimeConfig(app_dir=app_dir)
-    # اطمینان از وجود پوشه models (اگرچه بررسی فایل‌ها بعداً انجام می‌شود)
     config.models_dir.mkdir(parents=True, exist_ok=True)
     return config
