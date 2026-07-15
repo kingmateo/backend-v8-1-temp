@@ -203,7 +203,6 @@ def build_generate_video_model_specs_response() -> GenerateVideoModelsSpecsRespo
     return GenerateVideoModelsSpecsResponse(
         local_models=get_local_video_generation_model_specs(),
         api_models=get_api_video_generation_model_specs(),
-        # ✅ لیست آپ‌اسکیل‌ها
         upscalers=[
             "ltx-2.3-spatial-upscaler-x1.5-1.0",
             "ltx-2.3-spatial-upscaler-x2-1.1",
