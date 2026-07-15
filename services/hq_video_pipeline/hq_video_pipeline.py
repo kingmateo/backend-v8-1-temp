@@ -1,16 +1,13 @@
+# services/hq_video_pipeline/hq_video_pipeline.py
 from __future__ import annotations
 
-from typing import ClassVar, Iterator, Literal, Protocol
+from collections.abc import Iterator
+from typing import Protocol
 
-import torch
-from PIL import Image
-
-from services.interfaces import AudioOrNone, ImageConditioningInput
+from api_types import AudioOrNone, GenerateVideoRequest, ImageConditioningInput
 
 
 class HQVideoPipeline(Protocol):
-    pipeline_kind: ClassVar[Literal["fast_hq"]]
-
     @staticmethod
     def create(
         checkpoint_path: str,
@@ -18,21 +15,16 @@ class HQVideoPipeline(Protocol):
         upsampler_path: str,
         device: torch.device,
         streaming_prefetch_count: int | None,
-    ) -> "HQVideoPipeline":
+        hq_steps: int = 16,
+        hq_cfg_scale: float = 7.0,
+    ) -> HQVideoPipeline:
         ...
 
     def generate(
         self,
-        prompt: str,
-        seed: int,
-        height: int,
-        width: int,
-        num_frames: int,
-        frame_rate: int,
-        image: Image.Image | None,
-        images: list[ImageConditioningInput] | None,
-        audio: AudioOrNone,
-        camera_motion: str,
-        negative_prompt: str,
-    ) -> Iterator[torch.Tensor]:
+        request: GenerateVideoRequest,
+        audio: AudioOrNone = None,
+        image_conditioning: ImageConditioningInput | None = None,
+        progress_callback=None,
+    ) -> Iterator[bytes]:
         ...
